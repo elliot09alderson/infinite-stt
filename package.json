@@ -1,0 +1,56 @@
+{
+  "name": "infinite-stt",
+  "version": "1.0.0",
+  "description": "Free unlimited offline speech-to-text with NVIDIA Parakeet + Electron",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "setup": "node setup.js",
+    "build": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.infinitestt.app",
+    "productName": "Infinite STT",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "audio-processor.js",
+      "stt_server.py",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "model-parakeet",
+        "to": "model-parakeet",
+        "filter": [
+          "**/*",
+          "!.cache/**",
+          "!.gitattributes"
+        ]
+      },
+      {
+        "from": "venv",
+        "to": "venv",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": "portable",
+      "icon": null
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "uiohook-napi": "^1.5.5"
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+venv/
+model/
+model-parakeet/
+vosk-model.zip
+dist/
+__pycache__/
+*.pyc
+LAH/
+.claude/

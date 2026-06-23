@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infinite STT</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    .header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #2a2a4a;
+    }
+    .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+    .hotkey-badge {
+      font-size: 11px;
+      background: #2a2a4a;
+      padding: 4px 10px;
+      border-radius: 4px;
+      color: #888;
+      font-family: monospace;
+    }
+
+    .server-bar {
+      padding: 8px 20px;
+      background: #16213e;
+      font-size: 12px;
+      color: #7ec8e3;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .server-bar .spinner {
+      width: 12px; height: 12px;
+      border: 2px solid #7ec8e3;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .server-bar.ready { color: #2ecc71; background: #1a2e1a; }
+    .server-bar.ready .spinner { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-bar {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #2a2a4a;
+    }
+    .status-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.3s;
+    }
+    .status-dot.listening {
+      background: #e74c3c;
+      box-shadow: 0 0 8px rgba(231,76,60,0.6);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 4px rgba(231,76,60,0.4); }
+      50% { box-shadow: 0 0 12px rgba(231,76,60,0.8); }
+    }
+    .status-text { font-size: 14px; color: #aaa; }
+    .status-text.listening { color: #e74c3c; }
+
+    .error-bar {
+      padding: 8px 20px;
+      background: #4a1a1a;
+      color: #ff6b6b;
+      font-size: 12px;
+      display: none;
+    }
+    .error-bar.show { display: block; }
+
+    .output-area {
+      flex: 1;
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #output {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #ddd;
+      white-space: pre-wrap;
+      word-break: break-word;
+      user-select: text;
+      min-height: 60px;
+    }
+    #partial {
+      font-size: 14px;
+      color: #7ec8e3;
+      font-style: italic;
+    }
+    .placeholder {
+      color: #555;
+      font-size: 14px;
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .settings-row {
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px solid #2a2a4a;
+    }
+    .settings-row label {
+      font-size: 12px; color: #888; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .controls {
+      padding: 12px 20px;
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid #2a2a4a;
+    }
+    button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-toggle { background: #2ecc71; color: #fff; }
+    .btn-toggle:hover { background: #27ae60; }
+    .btn-toggle.listening { background: #e74c3c; }
+    .btn-toggle.listening:hover { background: #c0392b; }
+    .btn-toggle:disabled { background: #555; cursor: not-allowed; }
+    .btn-secondary { background: #2a2a4a; color: #aaa; }
+    .btn-secondary:hover { background: #3a3a5a; color: #ddd; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Infinite STT</h1>
+    <span class="hotkey-badge">Alt + Shift + M</span>
+  </div>
+
+  <div class="server-bar" id="serverBar">
+    <div class="spinner"></div>
+    <span id="serverText">Starting Parakeet STT engine...</span>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span class="status-text" id="statusText">Waiting for model...</span>
+  </div>
+
+  <div class="error-bar" id="errorBar"></div>
+
+  <div class="output-area">
+    <div id="output"></div>
+    <div id="partial"></div>
+    <div class="placeholder" id="placeholder">Press Alt+Shift+M or click Start to begin</div>
+  </div>
+
+  <div class="settings-row">
+    <label>
+      <input type="checkbox" id="autoPaste">
+      Auto-paste into focused app when stopped
+    </label>
+  </div>
+
+  <div class="controls">
+    <button class="btn-toggle" id="toggleBtn" disabled>Start Listening</button>
+    <button class="btn-secondary" id="copyBtn">Copy</button>
+    <button class="btn-secondary" id="clearBtn">Clear</button>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
